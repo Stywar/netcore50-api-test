@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('SCM') {
+            steps {
+               git branch: 'main' , url: 'https://github.com/Stywar/netcore50-api-test'
+            }
+        }
+        
+      stage('Build'){
+        steps {
+           bat(script: 'dir', returnStdout: true);
+           bat(script: 'dotnet restore', returnStdout: true);
+           bat(script: 'dotnet build', returnStdout: true);
+           bat(script: 'dotnet test', returnStdout: true);
+           
+             }
+            
+         }
+         
+     stage('Build Docker'){
+        steps {
+           
+           //bat(script: 'docker login --username %UsernameDockerHub% --password %PasswordDockerHub%', returnStdout: true);
+           bat(script: 'docker build -t antony0618/servicenet5 .', returnStdout: true);
+           bat(script: 'docker push antony0618/servicenet5', returnStdout: true);
+           
+             }
+            
+         }  
+         
+     stage('Restart Container'){
+        steps {
+            
+           bat(script: 'az login --service-principal -u "2f514113-c8ab-4185-9c4e-de9e6c887e36" -p "dmU~3pfrUgIgLFLb48NpBC7T8J8wc29edb" --tenant "74343d69-5375-4c7a-8cc9-08986488c964"', returnStdout: true);
+           bat(script: 'az account set --subscription "a29dad22-fa1e-4b41-ace0-4159a70e3816"', returnStdout: true);
+           bat(script: 'az container restart  --name  micro5testservicefv --resource-group Jenkins', returnStdout: true);
+           
+             }
+            
+         }      
+       
+     stage('Deploy in AKS'){
+        steps {
+            
+           bat(script: 'az aks get-credentials --resource-group Jenkins --name jenkins-devops-febrero22 &  kubectl config get-contexts --kubeconfig=%KUBE_PATH_CONFIG%', returnStdout: true);
+           bat(script: 'kubectl config use-context jenkins-devops-febrero22 --kubeconfig=%KUBE_PATH_CONFIG%', returnStdout: true);
+           bat(script: 'Kubectl delete --all pods --kubeconfig=%KUBE_PATH_CONFIG% & kubectl apply -f k8s.yml --kubeconfig=%KUBE_PATH_CONFIG%', returnStdout: true);
+           
+             }
+            
+         }   
+    }
+}
